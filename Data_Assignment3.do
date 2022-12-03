@@ -3,7 +3,7 @@
 * Data Assignment 3
 
 *Open Log
-capture log close
+capture log 
 log using Data_Assignment3, replace
 
 *Upload Data for ZIP-county Crosswalks
@@ -143,8 +143,20 @@ merge 1:1 county_full using "county_mortality.dta"
 drop if missing(population)
 drop if missing(HPI)
 
-*Regress HPI mortality rate on white, black, asian, native american races. 
+*Regress 2021 HPI on 2020 COVID19 mortality rate, white, black, asian, native american races. 
 regress HPI mortality_rate white_only black_only asian_only native_american_only
+
+*Regress 2021 HPI on 2020 COVID19 mortality rate 
+regress HPI mortality_rate 
+
+*Regress 2021 HPI on 2020 white, black, asian, native american races. 
+regress HPI white_only black_only asian_only native_american_only
+
+*Regress 2021 HPI on 2020 COVID19 mortality rate, white black
+regress HPI mortality_rate white_only black_only
+
+
+
 
 *Close Log
 log close
