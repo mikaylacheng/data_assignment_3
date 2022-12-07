@@ -1,11 +1,16 @@
 {smcl}
 {com}{sf}{ul off}{txt}{.-}
       name:  {res}<unnamed>
-       {txt}log:  {res}C:\Users\miki2000\Documents\Data_Assignment3.smcl
+       {txt}log:  {res}C:\Users\miki2000\Downloads\Data_Assignment3.smcl
   {txt}log type:  {res}smcl
- {txt}opened on:  {res} 3 Dec 2022, 16:01:04
+ {txt}opened on:  {res} 6 Dec 2022, 20:32:26
 
 {com}. 
+. 
+. 
+. ** CREATE ZIP TO FIPS TABLE **
+
+. 
 . 
 . 
 . *Upload Data for ZIP-county Crosswalks
@@ -18,9 +23,6 @@
 . 
 . 
 . *Drop unecessary columns
-
-. 
-. drop county
 
 . 
 . drop res_ratio
@@ -40,11 +42,11 @@
 . *Drop duplicates
 
 . 
-. duplicates drop
+. duplicates drop zip, force
 
-{p 0 4}{txt}Duplicates in terms of {txt} all variables{p_end}
+{p 0 4}{txt}Duplicates in terms of {res} zip{p_end}
 
-(14,772 observations deleted)
+{txt}(14,772 observations deleted)
 
 {com}. 
 . 
@@ -76,38 +78,9 @@ saved
 {com}. 
 . 
 . 
-. *Upload Data for State abbreviations used as reference later on
+. ** END ZIP TO FIPS TABLE **
 
 . 
-. import delimited "C:\Users\miki2000\Downloads\stateAbbreviations.csv", clear
-{res}{txt}(encoding automatically selected: UTF-8)
-{text}(2 vars, 51 obs)
-
-{com}. 
-. 
-. 
-. *Rename the following variables
-
-. 
-. rename v1 state
-{res}
-{com}. 
-. rename v2 USPS_ZIP_PREF_STATE
-{res}
-{com}. 
-. 
-. 
-. *Save data as state_abbrev.dta
-
-. 
-. save "state_abbrev.dta", replace
-{txt}{p 0 4 2}
-file {bf}
-state_abbrev.dta{rm}
-saved
-{p_end}
-
-{com}. 
 . 
 . 
 . *Upload Data for ZIP-level Housing Prices
@@ -119,12 +92,17 @@ saved
 {com}. 
 . 
 . 
-. *Convert Year type to int
+. *Convert following variables to numeric type
 
 . 
 . destring Year, replace
 {txt}Year: all characters numeric; {res}replaced {txt}as {res}int
 
+{com}. 
+. destring AnnualChange, replace
+{txt}AnnualChange: all characters numeric; {res}replaced {txt}as {res}double
+{txt}(31514 missing values generated)
+{res}
 {com}. 
 . 
 . 
@@ -184,52 +162,29 @@ saved
 {com}. 
 . 
 . 
-. *Cast HPI as a long
-
-. 
-. destring HPI, replace
-{txt}HPI: all characters numeric; {res}replaced {txt}as {res}double
-{txt}(113 missing values generated)
-{res}
-{com}. 
-. 
-. 
 . *Collapse HPI by USPS_ZIP_PREF_CITY and USPS_ZIP_PREF_STATE
 
 . 
-. collapse HPI, by(USPS_ZIP_PREF_CITY USPS_ZIP_PREF_STATE)
+. collapse AnnualChange, by(county)
 {res}
 {com}. 
 . 
 . 
-. *Merge with state_abbrev.dta
-
-. 
-. merge m:1 USPS_ZIP_PREF_STATE using "state_abbrev.dta"
+. rename county fips
 {res}
-{txt}{col 5}Result{col 33}Number of obs
-{col 5}{hline 41}
-{col 5}Not matched{col 30}{res}               0
-{txt}{col 5}Matched{col 30}{res}          14,244{txt}  (_merge==3)
-{col 5}{hline 41}
+{com}. 
+. destring fips, replace ignore(",")
+{txt}fips: all characters numeric; {res}replaced {txt}as {res}long
 
 {com}. 
 . 
 . 
-. *Generate county_full variable
+. *rename AnnualChange to HPI_change_2021
 
 . 
-. gen county_full = lower(USPS_ZIP_PREF_CITY) + " county, " + lower(state)
-
-. 
-. 
-. 
-. *Drop Merge
-
-. 
-. drop _merge
-
-. 
+. rename AnnualChange HPI_change_2021
+{res}
+{com}. 
 . 
 . 
 . *Save it as county_hpi.dta.
@@ -245,12 +200,44 @@ saved
 {com}. 
 . 
 . 
+. 
+. 
+. *Import Fips-Codes data
+
+. 
+. import delimited "C:\Users\miki2000\Downloads\county_fips_master.csv", clear
+{res}{txt}(encoding automatically selected: ISO-8859-1)
+{text}(13 vars, 3,146 obs)
+
+{com}. 
+. duplicates drop county_name state_name, force
+
+{p 0 4}{txt}Duplicates in terms of {res} county_name state_name{p_end}
+
+{txt}(1 observation deleted)
+
+{com}. 
+. 
+. 
+. gen merge_key = county_name + " " + strtrim(state_name)
+
+. 
+. save "fips_county.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+fips_county.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
 . *Upload County Census Data
 
 . 
 . import delimited "C:\Users\miki2000\Downloads\census.csv", clear 
 {res}{txt}(encoding automatically selected: UTF-8)
-{text}(8 vars, 3,222 obs)
+{text}(10 vars, 3,221 obs)
 
 {com}. 
 . 
@@ -258,25 +245,31 @@ saved
 . *rename variables
 
 . 
-. rename v1 county_full
+. rename v1 old_county
 {res}
 {com}. 
-. rename v2 population 
+. rename v2 county_name
 {res}
 {com}. 
-. rename v3 white_only 
+. rename v3 state_name
 {res}
 {com}. 
-. rename v4 black_only 
+. rename v4 population 
 {res}
 {com}. 
-. rename v5 native_american_only 
+. rename v5 white_only 
 {res}
 {com}. 
-. rename v6 asian_only 
+. rename v6 black_only 
 {res}
 {com}. 
-. rename v7 pacific_islander_only 
+. rename v7 native_american_only 
+{res}
+{com}. 
+. rename v8 asian_only 
+{res}
+{com}. 
+. rename v9 pacific_islander_only 
 {res}
 {com}. 
 . 
@@ -284,18 +277,43 @@ saved
 . *Drop unecessary columns
 
 . 
-. drop v8
+. drop old_county
+
+. 
+. drop v10
 
 . 
 . 
 . 
-. *Lowercase county_full data
+. * Gen merge column
 
 . 
-. replace county_full = lower(county_full)
-{txt}(3,221 real changes made)
+. gen merge_key = county_name + " " + strtrim(state_name)
+
+. 
+. 
+. 
+. merge 1:1 merge_key using "fips_county.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}              88
+{txt}{col 9}from master{col 30}{res}              82{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               6{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}           3,139{txt}  (_merge==3)
+{col 5}{hline 41}
 
 {com}. 
+. 
+. 
+. drop if missing(fips)
+{txt}(82 observations deleted)
+
+{com}. 
+. drop _merge
+
+. 
 . 
 . 
 . *Save it as county_census.dta"
@@ -316,48 +334,31 @@ saved
 . 
 . import delimited "C:\Users\miki2000\Downloads\us-counties-2020.csv", clear 
 {res}{txt}(encoding automatically selected: ISO-8859-1)
-{text}(7 vars, 884,737 obs)
+{text}(6 vars, 884,737 obs)
 
 {com}. 
-. 
-. 
-. *Sort data by county 
-
-. 
-. sort county_full
-
-. 
 . 
 . 
 . *Collapse COVID-19 deaths by county 
 
 . 
-. collapse (sum) deaths, by(county_full)
+. collapse (sum) deaths, by(fips)
 {res}
-{com}. 
-. 
-. 
-. *Lowercase county_full data
-
-. 
-. replace county_full = lower(county_full)
-{txt}(3,273 real changes made)
-
 {com}. 
 . 
 . 
 . *Merge with County Census Data on county_full 
 
 . 
-. merge 1:1 county_full using "county_census.dta"
+. merge 1:1 fips using "county_census.dta"
 {res}
 {txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}Not matched{col 30}{res}             493
-{txt}{col 9}from master{col 30}{res}             272{txt}  (_merge==1)
-{col 9}from using{col 30}{res}             221{txt}  (_merge==2)
+{col 5}Not matched{col 30}{res}              98
+{txt}{col 9}from master{col 30}{res}              86{txt}  (_merge==1)
+{col 9}from using{col 30}{res}              12{txt}  (_merge==2)
 
-{col 5}Matched{col 30}{res}           3,001{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}           3,133{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. 
@@ -367,11 +368,11 @@ saved
 
 . 
 . drop if missing(population)
-{txt}(272 observations deleted)
+{txt}(92 observations deleted)
 
 {com}. 
 . drop if missing(deaths)
-{txt}(221 observations deleted)
+{txt}(9 observations deleted)
 
 {com}. 
 . 
@@ -411,6 +412,23 @@ saved
 . gen mortality_rate = deaths / population
 
 . 
+. gen white_rate = white_only/ population
+
+. 
+. gen black_rate = black_only / population
+
+. 
+. gen native_american_rate = native_american_only/ population
+
+. 
+. gen asian_rate = asian_only / population
+
+. 
+. gen pacific_islander_rate = pacific_islander_only / population
+
+. 
+. 
+. 
 . 
 . 
 . *Drop Merge
@@ -445,19 +463,15 @@ saved
 . *Merge County HPI Data with County Mortality Data on County Full
 
 . 
-. merge 1:1 county_full using "county_mortality.dta"
-{res}{txt}{p 0 7 2}
-(variable
-{bf:county_full} was {bf:str43}, now {bf:str50} to accommodate using data's values)
-{p_end}
-
-{col 5}Result{col 33}Number of obs
+. merge 1:1 fips using "county_mortality.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}Not matched{col 30}{res}          15,893
-{txt}{col 9}from master{col 30}{res}          13,568{txt}  (_merge==1)
-{col 9}from using{col 30}{res}           2,325{txt}  (_merge==2)
+{col 5}Not matched{col 30}{res}             551
+{txt}{col 9}from master{col 30}{res}               6{txt}  (_merge==1)
+{col 9}from using{col 30}{res}             545{txt}  (_merge==2)
 
-{col 5}Matched{col 30}{res}             676{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}           2,585{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. 
@@ -467,55 +481,58 @@ saved
 
 . 
 . drop if missing(population)
-{txt}(13,568 observations deleted)
+{txt}(6 observations deleted)
 
 {com}. 
-. drop if missing(HPI)
-{txt}(2,328 observations deleted)
+. drop if missing(HPI_change_2021)
+{txt}(554 observations deleted)
 
 {com}. 
 . 
 . 
-. *Regress HPI mortality rate on white, black, asian, native american races. 
+. *Regress 2021 HPI on 2020 COVID19 mortality rate, white, black, asian, native american races. 
 
 . 
-. regress HPI mortality_rate white_only black_only asian_only native_american_only
+. regress HPI_change_2021 mortality_rate white_rate black_rate asian_rate native_american_rate
 
-{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}       673
-{txt}{hline 13}{c +}{hline 34}   F(5, 667)       = {res}    47.20
-{txt}       Model {c |} {res} 9951878.06         5  1990375.61   {txt}Prob > F        ={res}    0.0000
-{txt}    Residual {c |} {res} 28128973.9       667  42172.3746   {txt}R-squared       ={res}    0.2613
-{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.2558
-{txt}       Total {c |} {res} 38080851.9       672  56667.9344   {txt}Root MSE        =   {res} 205.36
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}     2,576
+{txt}{hline 13}{c +}{hline 34}   F(5, 2570)      = {res}    30.70
+{txt}       Model {c |} {res} 3107.20282         5  621.440564   {txt}Prob > F        ={res}    0.0000
+{txt}    Residual {c |} {res} 52028.4335     2,570  20.2445266   {txt}R-squared       ={res}    0.0564
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0545
+{txt}       Total {c |} {res} 55135.6363     2,575  21.4118976   {txt}Root MSE        =   {res} 4.4994
 
 {txt}{hline 21}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{col 1}                 HPI{col 22}{c |} Coefficient{col 34}  Std. err.{col 46}      t{col 54}   P>|t|{col 62}     [95% con{col 75}f. interval]
+{col 1}     HPI_change_2021{col 22}{c |} Coefficient{col 34}  Std. err.{col 46}      t{col 54}   P>|t|{col 62}     [95% con{col 75}f. interval]
 {hline 21}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{space 6}mortality_rate {c |}{col 22}{res}{space 2}-260.4242{col 34}{space 2} 96.42163{col 45}{space 1}   -2.70{col 54}{space 3}0.007{col 62}{space 4}-449.7506{col 75}{space 3}-71.09771
-{txt}{space 10}white_only {c |}{col 22}{res}{space 2} .0004365{col 34}{space 2} .0000792{col 45}{space 1}    5.51{col 54}{space 3}0.000{col 62}{space 4}  .000281{col 75}{space 3} .0005921
-{txt}{space 10}black_only {c |}{col 22}{res}{space 2}-.0005193{col 34}{space 2} .0001871{col 45}{space 1}   -2.78{col 54}{space 3}0.006{col 62}{space 4}-.0008868{col 75}{space 3}-.0001519
-{txt}{space 10}asian_only {c |}{col 22}{res}{space 2} .0014679{col 34}{space 2} .0001587{col 45}{space 1}    9.25{col 54}{space 3}0.000{col 62}{space 4} .0011563{col 75}{space 3} .0017795
-{txt}native_american_only {c |}{col 22}{res}{space 2}-.0094446{col 34}{space 2}  .001887{col 45}{space 1}   -5.01{col 54}{space 3}0.000{col 62}{space 4}-.0131497{col 75}{space 3}-.0057394
-{txt}{space 15}_cons {c |}{col 22}{res}{space 2} 308.4904{col 34}{space 2} 12.10562{col 45}{space 1}   25.48{col 54}{space 3}0.000{col 62}{space 4} 284.7207{col 75}{space 3} 332.2601
+{space 6}mortality_rate {c |}{col 22}{res}{space 2}-6.631244{col 34}{space 2} 1.036677{col 45}{space 1}   -6.40{col 54}{space 3}0.000{col 62}{space 4}-8.664051{col 75}{space 3}-4.598438
+{txt}{space 10}white_rate {c |}{col 22}{res}{space 2}-9.620427{col 34}{space 2} 1.092957{col 45}{space 1}   -8.80{col 54}{space 3}0.000{col 62}{space 4}-11.76359{col 75}{space 3}-7.477261
+{txt}{space 10}black_rate {c |}{col 22}{res}{space 2}-11.23602{col 34}{space 2} 1.235382{col 45}{space 1}   -9.10{col 54}{space 3}0.000{col 62}{space 4}-13.65847{col 75}{space 3}-8.813576
+{txt}{space 10}asian_rate {c |}{col 22}{res}{space 2}-18.50079{col 34}{space 2} 3.671025{col 45}{space 1}   -5.04{col 54}{space 3}0.000{col 62}{space 4}-25.69926{col 75}{space 3}-11.30232
+{txt}native_american_rate {c |}{col 22}{res}{space 2} -9.04836{col 34}{space 2} 2.116351{col 45}{space 1}   -4.28{col 54}{space 3}0.000{col 62}{space 4}-13.19829{col 75}{space 3}-4.898435
+{txt}{space 15}_cons {c |}{col 22}{res}{space 2} 20.27961{col 34}{space 2} 1.003138{col 45}{space 1}   20.22{col 54}{space 3}0.000{col 62}{space 4} 18.31257{col 75}{space 3} 22.24665
 {txt}{hline 21}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
 {res}
-{com}. *Regress 2021 HPI on 2020 COVID19 mortality rate 
+{com}. 
+. 
+. 
+. *Regress 2021 HPI on 2020 COVID19 mortality rate 
 
 . 
-. regress HPI mortality_rate 
+. regress HPI_change_2021 mortality_rate 
 
-{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}       673
-{txt}{hline 13}{c +}{hline 34}   F(1, 671)       = {res}     1.11
-{txt}       Model {c |} {res} 62849.3812         1  62849.3812   {txt}Prob > F        ={res}    0.2926
-{txt}    Residual {c |} {res} 38018002.6       671  56658.7222   {txt}R-squared       ={res}    0.0017
-{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0002
-{txt}       Total {c |} {res} 38080851.9       672  56667.9344   {txt}Root MSE        =   {res} 238.03
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}     2,576
+{txt}{hline 13}{c +}{hline 34}   F(1, 2574)      = {res}    60.47
+{txt}       Model {c |} {res}  1265.6089         1   1265.6089   {txt}Prob > F        ={res}    0.0000
+{txt}    Residual {c |} {res} 53870.0274     2,574  20.9285266   {txt}R-squared       ={res}    0.0230
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0226
+{txt}       Total {c |} {res} 55135.6363     2,575  21.4118976   {txt}Root MSE        =   {res} 4.5748
 
 {txt}{hline 15}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{col 1}           HPI{col 16}{c |} Coefficient{col 28}  Std. err.{col 40}      t{col 48}   P>|t|{col 56}     [95% con{col 69}f. interval]
+{col 1}HPI_chang~2021{col 16}{c |} Coefficient{col 28}  Std. err.{col 40}      t{col 48}   P>|t|{col 56}     [95% con{col 69}f. interval]
 {hline 15}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-mortality_rate {c |}{col 16}{res}{space 2}-111.2828{col 28}{space 2} 105.6601{col 39}{space 1}   -1.05{col 48}{space 3}0.293{col 56}{space 4}-318.7469{col 69}{space 3} 96.18135
-{txt}{space 9}_cons {c |}{col 16}{res}{space 2} 334.4487{col 28}{space 2} 13.62069{col 39}{space 1}   24.55{col 48}{space 3}0.000{col 56}{space 4} 307.7044{col 69}{space 3}  361.193
+mortality_rate {c |}{col 16}{res}{space 2}-7.240458{col 28}{space 2}  .931077{col 39}{space 1}   -7.78{col 48}{space 3}0.000{col 56}{space 4}-9.066194{col 69}{space 3}-5.414722
+{txt}{space 9}_cons {c |}{col 16}{res}{space 2}  11.4857{col 28}{space 2} .1293416{col 39}{space 1}   88.80{col 48}{space 3}0.000{col 56}{space 4} 11.23208{col 69}{space 3} 11.73933
 {txt}{hline 15}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
 {res}
 {com}. 
@@ -524,23 +541,23 @@ mortality_rate {c |}{col 16}{res}{space 2}-111.2828{col 28}{space 2} 105.6601{co
 . *Regress 2021 HPI on 2020 white, black, asian, native american races. 
 
 . 
-. regress HPI white_only black_only asian_only native_american_only
+. regress HPI_change_2021 white_rate black_rate asian_rate native_american_rate
 
-{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}       673
-{txt}{hline 13}{c +}{hline 34}   F(4, 668)       = {res}    56.64
-{txt}       Model {c |} {res} 9644238.83         4  2411059.71   {txt}Prob > F        ={res}    0.0000
-{txt}    Residual {c |} {res} 28436613.1       668  42569.7801   {txt}R-squared       ={res}    0.2533
-{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.2488
-{txt}       Total {c |} {res} 38080851.9       672  56667.9344   {txt}Root MSE        =   {res} 206.32
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}     2,576
+{txt}{hline 13}{c +}{hline 34}   F(4, 2571)      = {res}    27.71
+{txt}       Model {c |} {res} 2278.85843         4  569.714607   {txt}Prob > F        ={res}    0.0000
+{txt}    Residual {c |} {res} 52856.7779     2,571  20.5588401   {txt}R-squared       ={res}    0.0413
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0398
+{txt}       Total {c |} {res} 55135.6363     2,575  21.4118976   {txt}Root MSE        =   {res} 4.5342
 
 {txt}{hline 21}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{col 1}                 HPI{col 22}{c |} Coefficient{col 34}  Std. err.{col 46}      t{col 54}   P>|t|{col 62}     [95% con{col 75}f. interval]
+{col 1}     HPI_change_2021{col 22}{c |} Coefficient{col 34}  Std. err.{col 46}      t{col 54}   P>|t|{col 62}     [95% con{col 75}f. interval]
 {hline 21}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{space 10}white_only {c |}{col 22}{res}{space 2} .0003966{col 34}{space 2} .0000782{col 45}{space 1}    5.07{col 54}{space 3}0.000{col 62}{space 4}  .000243{col 75}{space 3} .0005501
-{txt}{space 10}black_only {c |}{col 22}{res}{space 2}-.0005931{col 34}{space 2}  .000186{col 45}{space 1}   -3.19{col 54}{space 3}0.001{col 62}{space 4}-.0009583{col 75}{space 3}-.0002279
-{txt}{space 10}asian_only {c |}{col 22}{res}{space 2} .0014968{col 34}{space 2} .0001591{col 45}{space 1}    9.41{col 54}{space 3}0.000{col 62}{space 4} .0011844{col 75}{space 3} .0018091
-{txt}native_american_only {c |}{col 22}{res}{space 2}-.0085489{col 34}{space 2} .0018663{col 45}{space 1}   -4.58{col 54}{space 3}0.000{col 62}{space 4}-.0122135{col 75}{space 3}-.0048843
-{txt}{space 15}_cons {c |}{col 22}{res}{space 2} 287.1852{col 34}{space 2} 9.225877{col 45}{space 1}   31.13{col 54}{space 3}0.000{col 62}{space 4}   269.07{col 75}{space 3} 305.3005
+{space 10}white_rate {c |}{col 22}{res}{space 2}-8.965594{col 34}{space 2} 1.096567{col 45}{space 1}   -8.18{col 54}{space 3}0.000{col 62}{space 4}-11.11584{col 75}{space 3} -6.81535
+{txt}{space 10}black_rate {c |}{col 22}{res}{space 2}-12.77661{col 34}{space 2} 1.221047{col 45}{space 1}  -10.46{col 54}{space 3}0.000{col 62}{space 4}-15.17095{col 75}{space 3}-10.38228
+{txt}{space 10}asian_rate {c |}{col 22}{res}{space 2}-17.44218{col 34}{space 2} 3.695652{col 45}{space 1}   -4.72{col 54}{space 3}0.000{col 62}{space 4}-24.68894{col 75}{space 3}-10.19543
+{txt}native_american_rate {c |}{col 22}{res}{space 2}-10.21981{col 34}{space 2} 2.124717{col 45}{space 1}   -4.81{col 54}{space 3}0.000{col 62}{space 4}-14.38614{col 75}{space 3} -6.05348
+{txt}{space 15}_cons {c |}{col 22}{res}{space 2} 19.24981{col 34}{space 2} .9977916{col 45}{space 1}   19.29{col 54}{space 3}0.000{col 62}{space 4} 17.29325{col 75}{space 3} 21.20636
 {txt}{hline 21}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
 {res}
 {com}. 
@@ -549,47 +566,31 @@ mortality_rate {c |}{col 16}{res}{space 2}-111.2828{col 28}{space 2} 105.6601{co
 . *Regress 2021 HPI on 2020 COVID19 mortality rate, white black
 
 . 
-. regress HPI mortality_rate white_only black_only asian_only native_american_only
+. regress HPI_change_2021 mortality_rate white_rate black_rate
 
-{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}       673
-{txt}{hline 13}{c +}{hline 34}   F(5, 667)       = {res}    47.20
-{txt}       Model {c |} {res} 9951878.06         5  1990375.61   {txt}Prob > F        ={res}    0.0000
-{txt}    Residual {c |} {res} 28128973.9       667  42172.3746   {txt}R-squared       ={res}    0.2613
-{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.2558
-{txt}       Total {c |} {res} 38080851.9       672  56667.9344   {txt}Root MSE        =   {res} 205.36
-
-{txt}{hline 21}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{col 1}                 HPI{col 22}{c |} Coefficient{col 34}  Std. err.{col 46}      t{col 54}   P>|t|{col 62}     [95% con{col 75}f. interval]
-{hline 21}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{space 6}mortality_rate {c |}{col 22}{res}{space 2}-260.4242{col 34}{space 2} 96.42163{col 45}{space 1}   -2.70{col 54}{space 3}0.007{col 62}{space 4}-449.7506{col 75}{space 3}-71.09771
-{txt}{space 10}white_only {c |}{col 22}{res}{space 2} .0004365{col 34}{space 2} .0000792{col 45}{space 1}    5.51{col 54}{space 3}0.000{col 62}{space 4}  .000281{col 75}{space 3} .0005921
-{txt}{space 10}black_only {c |}{col 22}{res}{space 2}-.0005193{col 34}{space 2} .0001871{col 45}{space 1}   -2.78{col 54}{space 3}0.006{col 62}{space 4}-.0008868{col 75}{space 3}-.0001519
-{txt}{space 10}asian_only {c |}{col 22}{res}{space 2} .0014679{col 34}{space 2} .0001587{col 45}{space 1}    9.25{col 54}{space 3}0.000{col 62}{space 4} .0011563{col 75}{space 3} .0017795
-{txt}native_american_only {c |}{col 22}{res}{space 2}-.0094446{col 34}{space 2}  .001887{col 45}{space 1}   -5.01{col 54}{space 3}0.000{col 62}{space 4}-.0131497{col 75}{space 3}-.0057394
-{txt}{space 15}_cons {c |}{col 22}{res}{space 2} 308.4904{col 34}{space 2} 12.10562{col 45}{space 1}   25.48{col 54}{space 3}0.000{col 62}{space 4} 284.7207{col 75}{space 3} 332.2601
-{txt}{hline 21}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{res}
-{com}. 
-. *Regress 2021 HPI on 2020 COVID19 mortality rate, white black
-
-. 
-. regress HPI mortality_rate white_only black_only
-
-{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}       673
-{txt}{hline 13}{c +}{hline 34}   F(3, 669)       = {res}    43.74
-{txt}       Model {c |} {res} 6244232.12         3  2081410.71   {txt}Prob > F        ={res}    0.0000
-{txt}    Residual {c |} {res} 31836619.8       669  47588.3704   {txt}R-squared       ={res}    0.1640
-{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.1602
-{txt}       Total {c |} {res} 38080851.9       672  56667.9344   {txt}Root MSE        =   {res} 218.15
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}     2,576
+{txt}{hline 13}{c +}{hline 34}   F(3, 2572)      = {res}    39.81
+{txt}       Model {c |} {res} 2446.74312         3   815.58104   {txt}Prob > F        ={res}    0.0000
+{txt}    Residual {c |} {res} 52688.8932     2,572  20.4855728   {txt}R-squared       ={res}    0.0444
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0433
+{txt}       Total {c |} {res} 55135.6363     2,575  21.4118976   {txt}Root MSE        =   {res} 4.5261
 
 {txt}{hline 15}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-{col 1}           HPI{col 16}{c |} Coefficient{col 28}  Std. err.{col 40}      t{col 48}   P>|t|{col 56}     [95% con{col 69}f. interval]
+{col 1}HPI_chang~2021{col 16}{c |} Coefficient{col 28}  Std. err.{col 40}      t{col 48}   P>|t|{col 56}     [95% con{col 69}f. interval]
 {hline 15}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
-mortality_rate {c |}{col 16}{res}{space 2}-288.0384{col 28}{space 2} 99.70071{col 39}{space 1}   -2.89{col 48}{space 3}0.004{col 56}{space 4}-483.8023{col 69}{space 3}-92.27441
-{txt}{space 4}white_only {c |}{col 16}{res}{space 2} .0004906{col 28}{space 2} .0000537{col 39}{space 1}    9.13{col 48}{space 3}0.000{col 56}{space 4} .0003851{col 69}{space 3} .0005961
-{txt}{space 4}black_only {c |}{col 16}{res}{space 2}-.0003602{col 28}{space 2} .0001979{col 39}{space 1}   -1.82{col 48}{space 3}0.069{col 56}{space 4}-.0007489{col 69}{space 3} .0000284
-{txt}{space 9}_cons {c |}{col 16}{res}{space 2} 305.3672{col 28}{space 2} 12.82411{col 39}{space 1}   23.81{col 48}{space 3}0.000{col 56}{space 4} 280.1869{col 69}{space 3} 330.5476
+mortality_rate {c |}{col 16}{res}{space 2}-6.699666{col 28}{space 2} 1.035542{col 39}{space 1}   -6.47{col 48}{space 3}0.000{col 56}{space 4}-8.730247{col 69}{space 3}-4.669086
+{txt}{space 4}white_rate {c |}{col 16}{res}{space 2}-5.270091{col 28}{space 2} .7864788{col 39}{space 1}   -6.70{col 48}{space 3}0.000{col 56}{space 4}-6.812287{col 69}{space 3}-3.727895
+{txt}{space 4}black_rate {c |}{col 16}{res}{space 2} -7.07809{col 28}{space 2} .9915835{col 39}{space 1}   -7.14{col 48}{space 3}0.000{col 56}{space 4}-9.022473{col 69}{space 3}-5.133707
+{txt}{space 9}_cons {c |}{col 16}{res}{space 2} 16.12529{col 28}{space 2} .6938021{col 39}{space 1}   23.24{col 48}{space 3}0.000{col 56}{space 4} 14.76482{col 69}{space 3} 17.48576
 {txt}{hline 15}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{com}. 
+. 
+. 
+. *Plot twoway scatter plot on HPI and mortality_rate variables. 
+
+. 
+. twoway (scatter HPI_change_2021 mortality_rate), ytitle(HPI Change in 2021) xtitle(2020 COVID-19 Per Capita Mortality Rate)
 {res}
 {com}. 
 . 
@@ -601,9 +602,9 @@ mortality_rate {c |}{col 16}{res}{space 2}-288.0384{col 28}{space 2} 99.70071{co
 . 
 . log close
       {txt}name:  {res}<unnamed>
-       {txt}log:  {res}C:\Users\miki2000\Documents\Data_Assignment3.smcl
+       {txt}log:  {res}C:\Users\miki2000\Downloads\Data_Assignment3.smcl
   {txt}log type:  {res}smcl
- {txt}closed on:  {res} 3 Dec 2022, 16:05:05
+ {txt}closed on:  {res} 6 Dec 2022, 20:33:07
 {txt}{.-}
 {smcl}
 {txt}{sf}{ul off}
