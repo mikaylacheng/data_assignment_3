@@ -147,21 +147,26 @@ merge 1:1 fips using "county_mortality.dta"
 drop if missing(population)
 drop if missing(HPI_change_2021)
 
-*Regress 2021 HPI on 2020 COVID19 mortality rate, white, black, asian, native american races. 
+*Regress 2021 HPI change on 2020 COVID19 mortality rate, white, black, asian, native american races. 
 regress HPI_change_2021 mortality_rate white_rate black_rate asian_rate native_american_rate
 
-*Regress 2021 HPI on 2020 COVID19 mortality rate 
+*Regress 2021 HPI change on 2020 COVID19 mortality rate 
 regress HPI_change_2021 mortality_rate 
 
-*Regress 2021 HPI on 2020 white, black, asian, native american races. 
+*Regress 2021 HPI change on 2020 white, black, asian, native american races. 
 regress HPI_change_2021 white_rate black_rate asian_rate native_american_rate
 
-*Regress 2021 HPI on 2020 COVID19 mortality rate, white black
+*Regress 2021 HPI change on 2020 COVID19 mortality rate, and white, black races
 regress HPI_change_2021 mortality_rate white_rate black_rate
+
+*Regress 2021 HPI change on 2020 COVID19 mortalit rate, and white, black, asian races
+reg HPI_change_2021 mortality_rate white_rate black_rate asian_rate
 
 *Plot twoway scatter plot on HPI and mortality_rate variables. 
 twoway (scatter HPI_change_2021 mortality_rate), ytitle(HPI Change in 2021) xtitle(2020 COVID-19 Per Capita Mortality Rate)
 
+*Sum variables
+sum HPI_change_2021 mortality_rate white_rate black_rate asian_rate native_american_rate
 
 *Close Log
 log close
